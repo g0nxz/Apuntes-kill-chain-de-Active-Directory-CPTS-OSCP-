@@ -1,0 +1,44 @@
+# === Salidas y artefactos de pentesting (NO subir a un repo público) ===
+# Resultados de escaneo
+*.nmap
+*.gnmap
+*.xml
+scan_*
+# Credenciales, hashes y tickets capturados
+*.hash
+*.ccache
+*.kirbi
+*.pfx
+*.pem
+*.key
+hashes.txt
+secretsdump*
+loot/
+creds/
+# Volcados de BloodHound / LDAP
+*.zip
+*.bloodhound
+*_bloodhound/
+domain_*.json
+domain_*.html
+*_users.json
+*_groups.json
+*_computers.json
+# Wordlists pesadas
+*.dict
+rockyou*
+wordlists/
+
+# === Sistema / editores ===
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/
+*.log
+
+# === Notas privadas (por si guardas apuntes reales de máquinas) ===
+private/
+notes-privadas/
+writeups-privados/
